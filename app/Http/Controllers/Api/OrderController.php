@@ -99,10 +99,4 @@ class OrderController extends Controller
             'message' => 'Order deleted successfully.'
         ]);
     }
-
-    public function index()
-    {
-        $orders = \App\Models\Order::with('products')->latest()->get();
-        return view('orders.index', compact('orders'));
-    }
 }

@@ -23,17 +23,27 @@ class OrderWebController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        // Filter to keep only checked products (where 'id' and 'quantity' exist)
+        $filteredProducts = collect($request->input('products', []))
+            ->filter(fn($product) => isset($product['id']) && isset($product['quantity']) && $product['quantity'] > 0)
+            ->toArray();
+
+        if (empty($filteredProducts)) {
+            return redirect()->back()
+                ->withErrors(['products' => 'Please select at least one product and enter a quantity.'])
+                ->withInput();
+        }
+
+        $validated = $request->validate([
             'customer_name' => 'required|string|max:255',
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
         ]);
 
-        $customer = Customer::firstOrCreate(['name' => $request->customer_name]);
-
+        $customer = Customer::firstOrCreate(['name' => $validated['customer_name']]);
         $order = $customer->orders()->create();
 
-        $order->products()->attach($request->product_id, ['quantity' => $request->quantity]);
+        foreach ($filteredProducts as $product) {
+            $order->products()->attach($product['id'], ['quantity' => $product['quantity']]);
+        }
 
         return redirect()->route('orders.index')->with('success', 'Order placed successfully!');
     }
